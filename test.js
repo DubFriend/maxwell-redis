@@ -51,15 +51,12 @@ describe('maxwell-redis', () => {
     });
 
     it('should set redis cache from mysql insert', done => {
-        sql.insert('a', { id: 5, name: 'foo', time: new Date(5000) })
+        const data = { id: 5, name: 'foo', time: new Date(5000).toISOString() };
+        sql.insert('a', data)
         .then(() => wait())
         .then(() => rGet('pa:id:5'))
-        .then(data => {
-            expect(JSON.parse(data)).to.deep.equal({
-                id: 5,
-                name: 'foo',
-                time: new Date(5000).toISOString()
-            });
+        .then(resp => {
+            expect(JSON.parse(resp)).to.deep.equal(data);
             done();
         }).done();
     });
@@ -68,8 +65,8 @@ describe('maxwell-redis', () => {
         sql.update('b', { value: -5.4 })
         .then(() => wait())
         .then(() => rGet(`pb:id:${this.b().id}`))
-        .then(data => {
-            expect(JSON.parse(data)).to.deep.equal(data);
+        .then(resp => {
+            expect(JSON.parse(resp)).to.deep.equal(this.b({ value: -5.4 }));
             done();
         }).done();
     });
