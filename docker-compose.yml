@@ -1,0 +1,50 @@
+mysql:
+  container_name: mysql
+  build: /home/vagrant/infra/container/mysql
+  ports:
+    - "3306:3306"
+  environment:
+    - MYSQL_USER=username
+    - MYSQL_PASSWORD=password
+    - MYSQL_ROOT_PASSWORD=password
+  volumes:
+    - /home/vagrant/data/maxwell-test/mysql:/var/lib/mysql
+    - /home/vagrant/maxwell-test/mysql-config.cnf:/etc/mysql/conf.d/mysql-config.cnf
+    - ./install.sql:/docker-entrypoint-initdb.d/install.sql
+  restart: always
+
+kafka:
+  container_name: kafka
+  build: /home/vagrant/infra/container/kafka
+  ports:
+    - 2181:2181
+    - 9092:9092
+  environment:
+    - ADVERTISED_HOST=192.168.50.4
+  restart: always
+
+kafka-manager:
+  container_name: kafka-manager
+  build: /home/vagrant/infra/container/kafka-manager
+  links:
+    - kafka
+  ports:
+    - 9000:9000
+  environment:
+    - ZK_HOSTS=kafka:2181
+    # - APPLICATION_SECRET=password
+  restart: always
+
+maxwell:
+  container_name: maxwell
+  build: /home/vagrant/infra/container/maxwell
+  links:
+    - mysql
+    - kafka
+  environment:
+    - MYSQL_USER=username
+    - MYSQL_PASSWORD=password
+    - REPLICATION_USER=maxwell
+    - REPLICATION_PASSWORD=password
+  restart: always
+
