@@ -48,3 +48,10 @@ maxwell:
     - REPLICATION_PASSWORD=password
   restart: always
 
+redis:
+  container_name: redis
+  build: /home/vagrant/infra/container/redis
+  ports:
+    - "6379:6379"
+  restart: always
+
