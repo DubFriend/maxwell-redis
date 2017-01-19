@@ -1,7 +1,8 @@
 'use strict';
 
-const Q = require('q');
-const _ = require('underscore');
+const Promise = require('bluebird');
+const _ = require('lodash');
+const moment = require('moment');
 const sql = require('mysql-wrap-production')(require('mysql').createPool({
     host: 'localhost',
     user: 'username',
@@ -28,11 +29,13 @@ const maxwellRedis = require('./index')({
     ]
 });
 
-const wait = ms => Q.Promise(resolve => setTimeout(
-    resolve, ms === undefined ? 100 : ms
+const mysqlDate = d => moment(d).format('YYYY-MM-DD HH:mm:ss');
+
+const wait = ms => new Promise(resolve => setTimeout(
+    resolve, ms === undefined ? 10 : ms
 ));
 
-const rGet = key => Q.Promise((resolve, reject) => redis.get(
+const rGet = key => new Promise((resolve, reject) => redis.get(
     key, (err, data) => err ? reject(err) : resolve(data)
 ));
 
@@ -41,8 +44,8 @@ describe('maxwell-redis', () => {
     beforeEach(done => {
         this.b = od => _.extend({ id: 'foo', value: 1.2 }, od);
 
-        Q.all([sql.delete('a'), sql.delete('b')])
-        .then(() => Q.Promise((resolve, reject) => redis.flushall(
+        Promise.all([sql.delete('a'), sql.delete('b')])
+        .then(() => new Promise((resolve, reject) => redis.flushall(
             (err, resp) => err ? reject(err) : resolve()
         )))
         .then(() => sql.insert('b', this.b()))
@@ -51,12 +54,15 @@ describe('maxwell-redis', () => {
     });
 
     it('should set redis cache from mysql insert', done => {
-        const data = { id: 5, name: 'foo', time: new Date(5000).toISOString() };
+        const data = { id: 5, name: 'foo', time: new Date(5000) };
         sql.insert('a', data)
         .then(() => wait())
         .then(() => rGet('pa:id:5'))
         .then(resp => {
-            expect(JSON.parse(resp)).to.deep.equal(data);
+            expect(JSON.parse(resp)).to.deep.equal(_.extend(
+                _.clone(data),
+                { time: mysqlDate(data.time) }
+            ));
             done();
         }).done();
     });
